@@ -98,55 +98,6 @@ function viewDepartment(){
     });
 };
 
-function promptUser() {
-
-    inquirer
-      .prompt({
-        type: "list",
-        name: "task",
-        message: "Would you like to do?",
-        choices: [
-          "View Employees",
-          "View Employees by Department",
-          "Add Employee",
-          "Remove Employees",
-          "Update Employee Role",
-          "Add Role",
-          "End"]
-      })
-      .then(function ({ task }) {
-        switch (task) {
-          case "View Employees":
-            viewEmployee();
-            break;
-  
-          case "View Employees by Department":
-            viewEmployeeByDepartment();
-            break;
-        
-          case "Add Employee":
-            addEmployee();
-            break;
-  
-          case "Remove Employees":
-            removeEmployees();
-            break;
-  
-          case "Update Employee Role":
-            updateEmployeeRole();
-            break;
-  
-          case "Add Role":
-            addRole();
-            break;
-  
-          case "End":
-            connection.end();
-            break;
-        }
-      });
-  }
-
   function viewEmployee() {
     console.log("Viewing employees\n");
   
@@ -344,6 +295,95 @@ function addEmployee() {
         });
       });
   }
+  
+  function updateEmployeeRole() { 
+    employeeArray();
+  }
+  
+  function employeeArray() {
+    console.log("Update an employee");
+  
+    var query =
+      `SELECT e.id, e.first_name, e.last_name, r.title, d.name AS department, r.salary, CONCAT(m.first_name, ' ', m.last_name) AS manager
+    FROM employee e
+    JOIN role r
+      ON e.role_id = r.id
+    JOIN department d
+    ON d.id = r.department_id
+    JOIN employee m
+      ON m.id = e.manager_id`
+  
+    connection.query(query, function (err, res) {
+      if (err) throw err;
+  
+      const employeeChoices = res.map(({ id, first_name, last_name }) => ({
+        value: id, name: `${first_name} ${last_name}`      
+      }));
+  
+      console.table(res);
+      console.log("employeeArray To Update\n")
+  
+      roleArray(employeeChoices);
+    });
+  }
+  
+  function roleArray(employeeChoices) {
+    console.log("Updating a role");
+  
+    var query =
+      `SELECT r.id, r.title, r.salary 
+    FROM role r`
+    let roleChoices;
+  
+    connection.query(query, function (err, res) {
+      if (err) throw err;
+  
+      roleChoices = res.map(({ id, title, salary }) => ({
+        value: id, title: `${title}`, salary: `${salary}`      
+      }));
+  
+      console.table(res);
+      console.log("roleArray to Update\n")
+  
+      promptEmployeeRole(employeeChoices, roleChoices);
+    });
+  }
+
+  function promptEmployeeRole(employeeChoices, roleChoices) {
+
+    inquirer
+      .prompt([
+        {
+          type: "list",
+          name: "employeeId",
+          message: "Which employee do you want to set with the role?",
+          choices: employeeChoices
+        },
+        {
+          type: "list",
+          name: "roleId",
+          message: "Which role do you want to update?",
+          choices: roleChoices
+        },
+      ])
+      .then(function (answer) {
+  
+        var query = `UPDATE employee SET role_id = ? WHERE id = ?`
+        connection.query(query,
+          [ answer.roleId,  
+            answer.employeeId
+          ],
+          function (err, res) {
+            if (err) throw err;
+  
+            console.table(res);
+            console.log(res.affectedRows + "Updated successfully");
+  
+            firstPrompt();
+          });
+      });
+  }
+  
   
 
 
